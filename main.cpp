@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
-    Connection *c = new Connection("127.0.0.1:7890");
-    c->verify("qwerty");
+    Connection *c = new Connection("139.198.169.248:5678");
+    c->verify("huangrui20041012");
     return a.exec();
 }
