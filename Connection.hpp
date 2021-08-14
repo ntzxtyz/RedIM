@@ -11,64 +11,83 @@
 #include <QApplication>
 #include <QObject>
 #include <configor/json.hpp>
+#include <QJsonObject>
+#include <QJsonDocument>
+
+typedef QNetworkReply* Reply;
+typedef configor::json Json;
 
 class Connection : public QObject {
 Q_OBJECT
 public:
-    Connection(QString addr) {
+    Connection(QString addr, QString token) {
         url = QString("http://") + addr;
         manager = new QNetworkAccessManager(this);
-    }
+    };
 
-    bool verify(QString token) {
-        QNetworkRequest request = getRequest("/verify");
-        configor::json Json;
-        Json["verifyKey"] = token.toStdString();
-        QNetworkReply *reply = manager->post(request, QByteArray::fromStdString(Json.dump()));
-        while (!reply->isFinished()) QApplication::processEvents();
-        configor::json answer = configor::json::parse(reply->readAll().toStdString());
-        if (static_cast<int>(answer["code"]) == 0) {
-            sessionKey = answer["session"];
-            return true;
-        } else return false;
-    }
+    Json sendFriendMessage(long target, Json MessageChain){
+        Json info = {
+                {"target", target},
+                {"messageChain", MessageChain}
+        };
+        return getReply("/sendFriendMessage", info);
+    };
 
-    bool bind(QString qq) {
-        id = qq;
-        QNetworkRequest request = getRequest("/bind");
-        configor::json Json;
-        Json["sessionKey"] = sessionKey.toStdString();
-        Json["qq"] = qq.toStdString();
-        QNetworkReply *reply = manager->post(request, QByteArray::fromStdString(Json.dump()));
-        while (!reply->isFinished())    QApplication::processEvents();
-        configor::json answer = configor::json::parse(reply->readAll().toStdString());
-        if (static_cast<int>(answer["code"]) == 0)
-            return true;
-        else return false;
-    }
+    Json recall(int target){
+        Json info = {
+                {"target", target}
+        };
+        return getReply("/recall", info);
+    };
 
-    bool release(){
-        QNetworkRequest request = getRequest("/release");
-        configor::json Json;
-        Json["sessionKey"] = sessionKey.toStdString();
-        Json["qq"] = id.toStdString();
-        QNetworkReply *reply = manager->post(request, QByteArray::fromStdString(Json.dump()));
-        while (!reply->isFinished())    QApplication::processEvents();
-        configor::json answer = configor::json::parse(reply->readAll().toStdString());
-        if (static_cast<int>(answer["code"]) == 0)
-            return true;
-        else return false;
-    }
+    Json getFriendList() {
+        return getReply("/friendList");
+    };
+
+    Json getGroupList() {
+        return getReply("/groupList");
+    };
+
+    Json getMemberList(long target) {
+        return getReply(("/memberList?target=" + std::to_string(target)).data());
+    };
+
+    Json getMyProfile() {
+        return getReply("/botProfile");
+    };
+
+    Json getFriendProfile(long target){
+        return getReply(("/friendProfile?target=" + std::to_string(target)).data());
+    };
 
 private:
-    QString sessionKey, url, id;
+    QString sessionKey, url;
+    long long id;
     QNetworkAccessManager *manager;
+    
+    void async(Reply reply) {
+        while (!reply->isFinished())
+            QApplication::processEvents();
+    };
+    
+    Json getReply(QString route, Json obj) {
+        Reply reply = manager->post(getRequest(route), QByteArray::fromStdString(obj.dump()));
+        async(reply);
+        return configor::json::parse(reply->readAll().toStdString());
+    };
+    
+    Json getReply(QString route) {
+        Reply reply = manager->get(getRequest(route));
+        async(reply);
+        return configor::json::parse(reply->readAll().toStdString());
+    };
+    
     QNetworkRequest getRequest(QString route) {
         QNetworkRequest request;
         request.setUrl(url + route);
         request.setRawHeader("Content-Type", "application/json");
         return request;
-    }
+    };
 };
 
 #endif //REDIM_CONNECTION_HPP
