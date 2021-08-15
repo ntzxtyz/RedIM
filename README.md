@@ -1,5 +1,7 @@
 # RedIM 
 
+![从不列颠沿海到西伯利亚，世界上红军最强大](https://s3.bmp.ovh/imgs/2021/08/be450201db55ea23.jpeg)
+
 ## 项目简介
 
 RedIM是一个基于Mirai项目的QQ第三方桌面客户端。
